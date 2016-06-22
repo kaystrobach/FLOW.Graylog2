@@ -2,6 +2,10 @@
 
 namespace KayStrobach\Graylog2\Log\Backend;
 
+use Gelf\Logger;
+use Gelf\Publisher;
+use Gelf\Transport\TcpTransport;
+use Gelf\Transport\UdpTransport;
 use TYPO3\Flow\Annotations as Flow;
 use TYPO3\Flow\Core\Bootstrap;
 use TYPO3\Flow\Http\HttpRequestHandlerInterface;
@@ -9,7 +13,7 @@ use TYPO3\Flow\Log\Backend\AbstractBackend;
 use TYPO3\Flow\Object\ObjectManagerInterface;
 
 
-class LogentriesBackend extends AbstractBackend {
+class Graylog2Backend extends AbstractBackend {
 
     /**
      * Graylog2 host
@@ -30,9 +34,80 @@ class LogentriesBackend extends AbstractBackend {
     protected $chunksize = null;
 
     /**
+     * Graylog2 transport either udp or tcp
+     * @var string
+     */
+    protected $transport = null;
+
+    /**
      * @var Logger
      */
     protected $logger = null;
+
+
+    /**
+     * @return string
+     */
+    public function getHost()
+    {
+        return $this->host;
+    }
+
+    /**
+     * @param string $host
+     */
+    public function setHost($host)
+    {
+        $this->host = $host;
+    }
+
+    /**
+     * @return string
+     */
+    public function getPort()
+    {
+        return $this->port;
+    }
+
+    /**
+     * @param string $port
+     */
+    public function setPort($port)
+    {
+        $this->port = $port;
+    }
+
+    /**
+     * @return string
+     */
+    public function getChunksize()
+    {
+        return $this->chunksize;
+    }
+
+    /**
+     * @param string $chunksize
+     */
+    public function setChunksize($chunksize)
+    {
+        $this->chunksize = $chunksize;
+    }
+
+    /**
+     * @return string
+     */
+    public function getTransport()
+    {
+        return $this->transport;
+    }
+
+    /**
+     * @param string $transport
+     */
+    public function setTransport($transport)
+    {
+        $this->transport = $transport;
+    }
 
     /**
      * Carries out all actions necessary to prepare the logging backend, such as opening
@@ -56,7 +131,16 @@ class LogentriesBackend extends AbstractBackend {
             $chunkSize = UdpTransport::CHUNK_SIZE_WAN;
         }
         // setup connection to graylog2 server
-        $transport = new UdpTransport($host, $port, $chunkSize);
+        switch (strtolower($this->transport)) {
+            case 'udp':
+                $transport = new UdpTransport($host, $port, $chunkSize);
+                break;
+            case 'tcp':
+            default:
+                $transport = new TcpTransport($host, $port, $chunkSize);
+                break;
+        }
+
         $publisher = new Publisher();
         $publisher->addTransport($transport);
         $this->logger = new Logger($publisher);
@@ -76,6 +160,9 @@ class LogentriesBackend extends AbstractBackend {
      */
     public function append($message, $severity = LOG_INFO, $additionalData = null, $packageKey = null, $className = null, $methodName = null)
     {
+        if($this->logger === null) {
+            return;
+        }
         $messageContext = array(
             'additionalData' => $additionalData,
             'packageKey' => $packageKey,
@@ -115,6 +202,6 @@ class LogentriesBackend extends AbstractBackend {
      */
     public function close()
     {
-        // TODO: Implement close() method.
+        // nothing to do here
     }
 }
