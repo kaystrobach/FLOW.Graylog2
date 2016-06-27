@@ -190,7 +190,12 @@ class Graylog2Backend extends AbstractBackend {
             }
         }
 
-        $this->logger->log($severity, $message, $messageContext);
+        try {
+            $this->logger->log($severity, $message, $messageContext);
+        } catch (\RuntimeException $e) {
+            // do nothing, as we can't log here anymore :(
+        }
+
     }
 
     /**
